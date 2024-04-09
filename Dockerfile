@@ -5,12 +5,17 @@ LABEL maintainer='IreneSarah'
 ENV PYTHONUNBUFFERED 1
 
 # Install system dependencies
-RUN apk add --no-cache gcc musl-dev python3-dev
-
-# Install Flake8 and its dependencies as root
-RUN python -m venv /py && \
-    /py/bin/pip install --upgrade pip && \
-    /py/bin/pip install flake8
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    postgresql-client \
+    postgresql-dev \
+    && apk add --virtual .tmp-build-deps \
+    build-base \
+    && python -m venv /py \
+    && /py/bin/pip install --upgrade pip \
+    && /py/bin/pip install flake8 \
+    && apk del .tmp-build-deps
 
 # Set up the application directory
 COPY ./requirements.txt /tmp/requirements.txt
@@ -22,14 +27,15 @@ EXPOSE 8000
 
 # Set up user
 ARG DEV=false
-RUN /py/bin/pip install -r /tmp/requirements.txt && \
-    adduser --disabled-password --no-create-home django-user && \
-    if [ $DEV = "true" ]; then \
+RUN /py/bin/pip install -r /tmp/requirements.txt \
+    && adduser --disabled-password --no-create-home django-user \
+    && if [ $DEV = "true" ]; then \
         /py/bin/pip install -r /tmp/requirements.dev.txt ; \
-    fi && \
-    chown -R django-user /py && \
-    rm -rf /tmp
+    fi \
+    && chown -R django-user /py \
+    && rm -rf /tmp
 
 ENV PATH="/py/bin:$PATH"
 
 USER django-user
+
